@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Espresso World Map</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Added Montserrat Bold for header as requested -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -50,14 +51,22 @@
             align-items: center;
             gap: 18px;
         }
+        /* Header logo + text - updated font, color, size and logo size */
         .logo {
             display: flex; align-items: center; gap: 15px;
-            font-weight: 700; color: var(--secondary);
-            font-size: 24px;
+            font-weight: 700;
+            font-size: 30px; /* increased size */
+            color: #A0522D; /* lighter brown requested */
+        }
+        .logo span {
+            font-family: 'Montserrat', sans-serif; /* Montserrat Bold for header text */
+            font-weight: 700;
+            font-size: 30px;
+            color: #A0522D;
         }
         .logo img {
-            height: 44px;
-            width: 44px;
+            height: 56px; /* increased logo size */
+            width: 56px;
             object-fit: contain;
             vertical-align: middle;
             margin-right: 6px;
@@ -175,6 +184,10 @@
             opacity: 0.4;
             cursor: not-allowed;
         }
+
+        /* Hide main (collapsed) search bar so search only visible when expanded */
+        #searchBarContainer { display: none; }
+
         .search-bar-container {
             position: absolute;
             left: 50%;
@@ -310,6 +323,27 @@
             box-shadow: none;
             overflow: hidden;
         }
+        /* Expanded branding (logo + text at top-left of expanded map) */
+        .expanded-branding {
+            position: absolute;
+            top: 18px;
+            left: 22px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 9998;
+            pointer-events: none; /* keep map interactions available */
+            color: #A0522D;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 22px;
+        }
+        .expanded-branding img {
+            height: 48px;
+            width: 48px;
+            object-fit: contain;
+        }
+
         #mapExpandOverlay #expandedEventMap {
             width: 100%;
             height: 100%;
@@ -349,6 +383,7 @@
         }
         #mapExpandOverlay .search-bar-container {
             bottom: 80px;
+            display: flex !important; /* ensure expanded search is visible */
         }
         #mapExpandOverlay .chrono-nav-btns {
             bottom: 28px;
@@ -608,6 +643,8 @@
                 width: 98vw;
                 min-width: unset;
             }
+            .logo img { height: 48px; width:48px; } /* responsive logo size */
+            .logo span { font-size: 24px; }
         }
         @media (max-width: 700px) {
             .espresso-frame {
@@ -658,6 +695,8 @@
                 gap: 8px;
                 bottom: 12px;
             }
+            .expanded-branding { top: 12px; left: 12px; font-size: 18px; }
+            .expanded-branding img { height: 40px; width: 40px; }
         }
     </style>
 </head>
@@ -682,6 +721,7 @@
                     <button class="brown-btn" id="prevLocationBtn"><i class="fa-solid fa-arrow-left"></i> Previous</button>
                     <button class="brown-btn" id="nextLocationBtn">Next <i class="fa-solid fa-arrow-right"></i></button>
                 </div>
+                <!-- MAIN search bar (collapsed) is intentionally hidden via CSS so search appears only in expanded map -->
                 <div class="search-bar-container" id="searchBarContainer">
                     <div class="search-bar-box">
                         <div class="search-bar-row">
@@ -702,6 +742,12 @@
         <div id="mapExpandOverlay">
             <div class="expanded-map-container">
                 <div class="expanded-map-inner">
+                    <!-- Inserted expanded branding (logo + text) at top-left of expanded map -->
+                    <div class="expanded-branding" aria-hidden="true">
+                        <img src="espresso-logo.png" alt="Espresso Logo">
+                        <span>Espresso</span>
+                    </div>
+
                     <button class="expand-btn" id="collapseBtn"><i class="fa-solid fa-xmark"></i></button>
                     <div class="chrono-nav-btns" id="expandedChronoNavBtns">
                         <button class="brown-btn" id="expandedPrevLocationBtn"><i class="fa-solid fa-arrow-left"></i> Previous</button>
