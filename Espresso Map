@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espresso World Map</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        :root {
+            --primary: #422F17;
+            --secondary: #FFB85B;
+            --accent: #A56A2A;
+            --light: #FFD38A;
+            --gray: #8A6A45;
+            --frame-bg: #422F17;
+            --frame-radius: 28px;
+            --frame-padding: 20px;
+            --frame-shadow: 0 8px 48px #422f1744;
+            --brown-btn: #422F17;
+            --brown-btn-hover: #A56A2A;
+            --expand-z: 9999;
+            --coffee-brown: #7C4A1E;
+        }
+        html, body {
+            background: #FFE7C9;
+            color: #333;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            min-height: 100vh;
+        }
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: #fff;
+            padding: 12px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+            transition: filter .4s;
+        }
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .logo {
+            display: flex; align-items: center; gap: 15px;
+            font-weight: 700; color: var(--secondary);
+            font-size: 24px;
+        }
+        .logo img {
+            height: 44px;
+            width: 44px;
+            object-fit: contain;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+        .main-content {
+            position: relative;
+            z-index: 1;
+            transition: filter .4s;
+        }
+        .espresso-frame {
+            background: var(--frame-bg);
+            border-radius: var(--frame-radius);
+            box-shadow: var(--frame-shadow);
+            max-width: 1240px;
+            margin: 40px auto 0 auto;
+            padding: var(--frame-padding);
+            position: relative;
+            transition: max-width .3s cubic-bezier(.7,1.2,.25,1), width .3s cubic-bezier(.7,1.2,.25,1), height .3s cubic-bezier(.7,1.2,.25,1), padding .3s, box-shadow .3s;
+            z-index: 201;
+        }
+        .espresso-frame .frame-tag {
+            position: absolute;
+            top: -23px;
+            left: 28px;
+            background: var(--primary);
+            color: var(--secondary);
+            font-weight: 700;
+            font-size: 20px;
+            letter-spacing: 1px;
+            border-radius: 18px;
+            padding: 6px 26px 6px 26px;
+            box-shadow: 0 2px 8px #0002;
+            border: 2.5px solid var(--secondary);
+            z-index: 20;
+            pointer-events: none;
+        }
+        .espresso-map-area {
+            position: relative;
+            width: 100%;
+            height: 64vh;
+            min-height: 340px;
+            border-radius: 18px;
+            overflow: hidden;
+            margin-top: 18px;
+            background: #ffe7c9;
+            transition: height .3s;
+        }
+        #eventMap {
+            width: 100%;
+            height: 100%;
+            min-height: 340px;
+            border-radius: 18px;
+            transition: border-radius .3s;
+        }
+        .chrono-nav-btns {
+            position: absolute;
+            left: 50%;
+            bottom: 28px;
+            transform: translateX(-50%);
+            z-index: 6001;
+            display: flex;
+            gap: 24px;
+        }
+        .brown-btn {
+            background: var(--brown-btn);
+            color: var(--secondary);
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 700;
+            padding: 8px 26px 8px 26px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px #422F170F;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background .13s;
+            outline: none;
+        }
+        .brown-btn:hover:not(:disabled) {
+            background: var(--brown-btn-hover);
+            color: #fff;
+        }
+        .brown-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .expand-btn {
+            position: absolute;
+            top: 26px;
+            right: 38px;
+            z-index: 5100;
+            background: var(--secondary);
+            color: var(--primary);
+            border: none;
+            border-radius: 12px;
+            padding: 10px 26px 10px 26px;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 2px 12px #422F170F;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background .13s, color .13s;
+        }
+        .expand-btn i {
+            font-size: 1.15em;
+        }
+        .expand-btn:hover:not(:disabled) {
+            background: var(--accent);
+            color: #fff;
+        }
+        .expand-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .search-bar-container {
+            position: absolute;
+            left: 50%;
+            bottom: 80px;
+            transform: translateX(-50%);
+            z-index: 5001;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 330px;
+            max-width: 96vw;
+        }
+        .search-bar-box {
+            background: var(--primary);
+            border-radius: 14px;
+            box-shadow: 0 4px 24px rgba(66,47,23,0.14);
+            padding: 12px 16px 10px 16px;
+            width: 100%;
+            display: flex;
+        }
+        .search-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+        .search-bar-row input[type="text"] {
+            flex: 1;
+            border: none;
+            outline: none;
+            background: #fff9ee;
+            color: #422F17;
+            font-size: 15px;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-family: 'Inter', sans-serif;
+        }
+        .search-bar-row .fa-magnifying-glass {
+            color: var(--accent);
+            font-size: 1.1em;
+        }
+        .search-suggestions {
+            background: #fff9ee;
+            color: var(--primary);
+            border-radius: 0 0 13px 13px;
+            box-shadow: 0 6px 24px rgba(66,47,23,0.10);
+            margin-top: 2px;
+            width: 100%;
+            max-height: 240px;
+            overflow-y: auto;
+            position: relative;
+            z-index: 10;
+        }
+        .search-suggestion {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #eed8b7;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .search-suggestion:last-child { border-bottom: none;}
+        .search-suggestion:hover, .search-suggestion.active {
+            background: var(--secondary);
+            color: var(--primary);
+        }
+        .search-suggestion .fa-clock,
+        .search-suggestion .fa-location-dot {
+            color: var(--accent);
+        }
+        .zoom-controls {
+            position: absolute;
+            top: 90px;
+            left: 38px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            opacity: 1;
+            pointer-events: auto;
+            z-index: 5101;
+            transition: opacity .24s;
+        }
+        .zoom-btn {
+            background: rgba(255, 184, 91, 0.68);
+            color: var(--primary);
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            font-size: 1.48em;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 2px 8px #0001;
+            transition: background .13s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: .84;
+        }
+        .zoom-btn:hover {
+            background: var(--accent);
+            color: #fff;
+            opacity: 1;
+        }
+        /* Expanded map overlay */
+        #mapExpandOverlay {
+            display: none;
+            position: fixed;
+            z-index: var(--expand-z);
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(40,24,8,0.18);
+        }
+        #mapExpandOverlay.active {
+            display: block;
+        }
+        #mapExpandOverlay .expanded-map-container {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100vw; height: 100vh;
+            background: #ffe7c9;
+            z-index: var(--expand-z);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #mapExpandOverlay .expanded-map-inner {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: #ffe7c9;
+            border-radius: 0;
+            box-shadow: none;
+            overflow: hidden;
+        }
+        #mapExpandOverlay #expandedEventMap {
+            width: 100%;
+            height: 100%;
+            min-height: 340px;
+            border-radius: 0;
+        }
+        #mapExpandOverlay .expand-btn {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            left: auto;
+            z-index: 9999;
+            background: var(--secondary);
+            color: var(--primary);
+            border: none;
+            font-size: 2em;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px #422F170F;
+            padding: 0 15px;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background .13s, color .13s;
+        }
+        #mapExpandOverlay .expand-btn:hover {
+            color: #fff;
+            background: var(--accent);
+        }
+        #mapExpandOverlay .search-bar-container,
+        #mapExpandOverlay .zoom-controls,
+        #mapExpandOverlay .chrono-nav-btns {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            z-index: 9001;
+        }
+        #mapExpandOverlay .search-bar-container {
+            bottom: 80px;
+        }
+        #mapExpandOverlay .chrono-nav-btns {
+            bottom: 28px;
+        }
+        .hidden { display: none !important; }
+
+        /* Brown rectangle style for section titles */
+        .section-brown-rect {
+            background: var(--coffee-brown);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            border-radius: 18px;
+            padding: 8px 32px 8px 28px;
+            font-size: 1.25em;
+            font-weight: 700;
+            box-shadow: 0 4px 24px #422f1720;
+            gap: 17px;
+            margin-bottom: 8px;
+        }
+        .section-brown-rect .coffee-cup {
+            width: 36px;
+            height: 36px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        .events-section-title,
+        .next-events-section-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 48px 0 18px 0;
+            letter-spacing: 1px;
+            gap: 10px;
+            background: none;
+            box-shadow: none;
+            font-size: 1.3em;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .events-section-title.brown,
+        .next-events-section-title.brown {
+            color: var(--coffee-brown);
+            font-size: 1.8em;
+            gap: 16px;
+        }
+        /* Hide original brown styling, use brown rectangle instead */
+        .events-section-title.brown,
+        .next-events-section-title.brown {
+            color: unset;
+            font-size: unset;
+            gap: unset;
+        }
+
+        .future-events-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin: 0 auto 0 auto;
+            max-width: 900px;
+            padding: 8px 0 8px 0;
+        }
+        .future-event-card {
+            background: #fff8ea;
+            border-radius: 14px;
+            box-shadow: 0 2px 16px #422f171a;
+            display: flex;
+            flex-direction: column;
+            width: 260px;
+            min-width: 200px;
+            margin: 0;
+            cursor: default;
+            transition: transform .14s, box-shadow .14s;
+            overflow: hidden;
+            border: 2.5px solid #ffe0b2;
+        }
+        .future-event-card:hover {
+            transform: translateY(-2px) scale(1.025);
+            box-shadow: 0 6px 18px #422f1730;
+        }
+        .future-event-details {
+            padding: 18px 17px 16px 17px;
+        }
+        .future-event-title {
+            font-size: 1.10em;
+            font-weight: 700;
+            color: var(--coffee-brown);
+            margin-bottom: 4px;
+        }
+        .future-event-meta {
+            font-size: 0.98em;
+            color: var(--gray);
+            margin-bottom: 6px;
+        }
+        .future-event-caption {
+            font-size: 0.97em;
+            color: var(--primary);
+            margin-top: 4px;
+        }
+        .next-city-copy {
+            margin: 10px auto 38px auto;
+            text-align: center;
+            font-size: 1.19em;
+            color: var(--accent);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .past-events-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin: 0 auto 0 auto;
+            max-width: 1200px;
+            padding: 12px 0 24px 0;
+        }
+        .past-event-card {
+            background: #fff9ee;
+            border-radius: 14px;
+            box-shadow: 0 2px 16px #422f171a;
+            display: flex;
+            flex-direction: column;
+            width: 270px;
+            min-width: 230px;
+            margin: 0;
+            cursor: pointer;
+            transition: transform .16s, box-shadow .16s;
+            overflow: hidden;
+            border: 2.5px solid #EED8B7;
+        }
+        .past-event-card:hover {
+            transform: translateY(-4px) scale(1.04);
+            box-shadow: 0 8px 24px #422f1750;
+            border-color: var(--secondary);
+        }
+        .past-event-img {
+            width: 100%;
+            height: 145px;
+            object-fit: cover;
+            border-radius: 12px 12px 0 0;
+        }
+        .past-event-details {
+            padding: 14px 18px 13px 18px;
+        }
+        .past-event-title {
+            font-size: 1.13em;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 2px;
+        }
+        .past-event-meta {
+            font-size: 0.97em;
+            color: var(--gray);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .past-event-caption {
+            font-size: 1em;
+            color: var(--primary);
+        }
+        /* Modal Styles */
+        .memory-modal {
+            display: none;
+            position: fixed;
+            z-index: 99999;
+            left: 0; top: 0; right: 0; bottom: 0;
+            background: rgba(40,24,8,0.23);
+            align-items: center;
+            justify-content: center;
+        }
+        .memory-modal.active {
+            display: flex;
+        }
+        .memory-modal-content {
+            background: #fff9ee;
+            border-radius: 16px;
+            box-shadow: 0 2px 38px #422f1740;
+            max-width: 98vw;
+            width: 410px;
+            padding: 34px 18px 18px 18px;
+            position: relative;
+        }
+        .memory-modal-close {
+            position: absolute;
+            right: 18px; top: 10px;
+            background: none;
+            border: none;
+            font-size: 2.2em;
+            color: var(--brown-btn);
+            cursor: pointer;
+        }
+        .memory-modal-details {
+            font-size: 1.13em;
+            font-weight: 600;
+            color: var(--coffee-brown);
+            margin-bottom: 13px;
+        }
+        .modal-memories-slider {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+            gap: 7px;
+        }
+        .modal-slider-arrow {
+            background: #ffe7c9;
+            border: none;
+            font-size: 2em;
+            color: var(--accent);
+            border-radius: 8px;
+            cursor: pointer;
+            padding: 4px 10px;
+            transition: background .14s;
+        }
+        .modal-slider-arrow:hover {
+            background: var(--accent);
+            color: #fff;
+        }
+        #modalMemImg {
+            max-width: 240px;
+            max-height: 175px;
+            border-radius: 9px;
+            box-shadow: 0 1px 7px #422f1730;
+        }
+        .modal-memories-dots {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .modal-memories-dots .dot {
+            display: inline-block;
+            width: 10px; height: 10px;
+            margin: 0 2px;
+            border-radius: 50%;
+            background: #e5b87c;
+            cursor: pointer;
+        }
+        .modal-memories-dots .dot.active {
+            background: var(--accent);
+        }
+        .memory-modal-caption {
+            font-size: 1em;
+            color: var(--primary);
+            margin-top: 6px;
+        }
+        @media (max-width: 900px) {
+            .expand-btn { right: 16px; }
+            .espresso-frame { padding: 9px; }
+            .espresso-frame .frame-tag { left: 16px; }
+            .past-events-box, .future-events-box {
+                gap: 10px;
+                padding: 2px 0 10px 0;
+            }
+            .past-event-card, .future-event-card {
+                width: 98vw;
+                min-width: unset;
+            }
+        }
+        @media (max-width: 700px) {
+            .espresso-frame {
+                margin: 12px 0 0 0;
+                padding: 0;
+                border-radius: 0;
+            }
+            #mapExpandOverlay .expanded-map-inner {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+            }
+            #mapExpandOverlay #expandedEventMap {
+                border-radius: 0;
+            }
+            .espresso-map-area, .espresso-frame.expanded .espresso-map-area {
+                border-radius: 0;
+                margin-top: 0;
+            }
+            #eventMap,
+            .espresso-frame.expanded #eventMap {
+                border-radius: 0;
+            }
+            .frame-tag {
+                left: 12px;
+                font-size: 16px;
+                padding: 5px 15px;
+            }
+            .search-bar-container {
+                left: 50%;
+                bottom: 80px;
+                width: 99vw;
+                max-width: 99vw;
+                padding-left: 0;
+                padding-right: 0;
+            }
+            .zoom-controls {
+                left: 15px;
+            }
+            .past-events-box, .future-events-box {
+                padding: 12px 3vw 8px 3vw;
+            }
+            .past-event-card, .future-event-card {
+                width: 98vw;
+                min-width: unset;
+            }
+            .chrono-nav-btns {
+                gap: 8px;
+                bottom: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header id="mainHeader">
+        <div class="header-container">
+            <div class="logo">
+                <img src="espresso-logo.png" alt="Espresso Logo">
+                <span>Espresso</span>
+            </div>
+        </div>
+    </header>
+    <div class="main-content" id="mainContent">
+        <!-- Espresso Frame (Map) -->
+        <div class="espresso-frame" id="espressoFrame">
+            <div class="frame-tag">Espresso world map</div>
+            <button class="expand-btn" id="expandBtn"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> Expand</button>
+            <div class="espresso-map-area">
+                <!-- Chrono navigation buttons -->
+                <div class="chrono-nav-btns" id="chronoNavBtns">
+                    <button class="brown-btn" id="prevLocationBtn"><i class="fa-solid fa-arrow-left"></i> Previous</button>
+                    <button class="brown-btn" id="nextLocationBtn">Next <i class="fa-solid fa-arrow-right"></i></button>
+                </div>
+                <div class="search-bar-container" id="searchBarContainer">
+                    <div class="search-bar-box">
+                        <div class="search-bar-row">
+                            <i class="fas fa-magnifying-glass"></i>
+                            <input type="text" id="eventSearchInput" placeholder="Search events...">
+                        </div>
+                    </div>
+                    <div class="search-suggestions" id="searchSuggestions" style="display:none;"></div>
+                </div>
+                <div class="zoom-controls" id="zoomControls">
+                    <button class="zoom-btn" id="zoomInBtn" title="Zoom in"><i class="fa-solid fa-plus"></i></button>
+                    <button class="zoom-btn" id="zoomOutBtn" title="Zoom out"><i class="fa-solid fa-minus"></i></button>
+                </div>
+                <div id="eventMap"></div>
+            </div>
+        </div>
+        <!-- Map Expand Overlay -->
+        <div id="mapExpandOverlay">
+            <div class="expanded-map-container">
+                <div class="expanded-map-inner">
+                    <button class="expand-btn" id="collapseBtn"><i class="fa-solid fa-xmark"></i></button>
+                    <div class="chrono-nav-btns" id="expandedChronoNavBtns">
+                        <button class="brown-btn" id="expandedPrevLocationBtn"><i class="fa-solid fa-arrow-left"></i> Previous</button>
+                        <button class="brown-btn" id="expandedNextLocationBtn">Next <i class="fa-solid fa-arrow-right"></i></button>
+                    </div>
+                    <div class="search-bar-container" id="expandedSearchBarContainer">
+                        <div class="search-bar-box">
+                            <div class="search-bar-row">
+                                <i class="fas fa-magnifying-glass"></i>
+                                <input type="text" id="expandedEventSearchInput" placeholder="Search events...">
+                            </div>
+                        </div>
+                        <div class="search-suggestions" id="expandedSearchSuggestions" style="display:none;"></div>
+                    </div>
+                    <div class="zoom-controls" id="expandedZoomControls">
+                        <button class="zoom-btn" id="expandedZoomInBtn" title="Zoom in"><i class="fa-solid fa-plus"></i></button>
+                        <button class="zoom-btn" id="expandedZoomOutBtn" title="Zoom out"><i class="fa-solid fa-minus"></i></button>
+                    </div>
+                    <div id="expandedEventMap"></div>
+                </div>
+            </div>
+        </div>
+        <!-- Next Events Feature -->
+        <div class="next-events-section-title brown" style="background:none;box-shadow:none;">
+            <span class="section-brown-rect">
+                Where we'll brew next
+                <img class="coffee-cup" alt="coffee cup" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2615.png">
+            </span>
+        </div>
+        <div class="future-events-box" id="futureEventsBox"></div>
+        <div class="next-city-copy">Next place will be your city!</div>
+        <!-- Past Events Box -->
+        <div class="events-section-title brown" style="background:none;box-shadow:none;">
+            <span class="section-brown-rect">
+                Where we brewed
+                <img class="coffee-cup" alt="coffee cup" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2615.png">
+            </span>
+        </div>
+        <div class="past-events-box" id="pastEventsBox"></div>
+    </div>
+    <!-- Modal for full memory image/details -->
+    <div class="memory-modal" id="memoryModal">
+        <div class="memory-modal-content" id="memoryModalContent">
+            <button class="memory-modal-close" id="memoryModalClose">&times;</button>
+            <div class="memory-modal-details" id="memoryModalDetails"></div>
+            <div class="modal-memories-slider" id="modalSlider">
+                <button class="modal-slider-arrow left" id="modalMemPrev">&#10094;</button>
+                <img src="" alt="Memory" id="modalMemImg">
+                <button class="modal-slider-arrow right" id="modalMemNext">&#10095;</button>
+            </div>
+            <div class="modal-memories-dots" id="modalMemDots"></div>
+            <div class="memory-modal-caption" id="memoryModalCaption"></div>
+        </div>
+    </div>
+    <script>
+    // --- Past Event Images/Memory Slides ---
+    const pastMemories = [
+        {
+            event: "Brussels, Belgium",
+            images: [
+                "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&w=600&q=80"
+            ],
+            caption: "Brussels: Research gatherings and high-energy debates in the heart of Europe.",
+            date: "2024-07-01"
+        },
+        {
+            event: "San Francisco, USA",
+            images: [
+                "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&w=600&q=80",
+                "https://images.unsplash.com/photo-1465101178521-c3a6088b7a17?auto=format&fit=crop&w=600&q=80"
+            ],
+            caption: "San Francisco: Sipping espresso, sharing stories, and nights full of innovation.",
+            date: "2024-10-01"
+        },
+        {
+            event: "Bangkok, Thailand",
+            images: [
+                "https://images.unsplash.com/photo-1549692520-acc6669e2f0c?auto=format&fit=crop&w=600&q=80"
+            ],
+            caption: "Bangkok: Yoga, padel, and new friendships at Devcon.",
+            date: "2024-11-01"
+        },
+        {
+            event: "Denver, USA",
+            images: [
+                "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80",
+                "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=600&q=80"
+            ],
+            caption: "ETHDenver 2025: Whiteboarding, laughter, and a community of builders in snowy Denver.",
+            date: "2025-02-01"
+        },
+        {
+            event: "Cannes, France",
+            images: [
+                "https://images.unsplash.com/photo-1520975916090-3105956dac38?auto=format&fit=crop&w=600&q=80"
+            ],
+            caption: "Cannes, France: Sunrise runs and sunset chats by the Riviera.",
+            date: "2025-07-01"
+        },
+        {
+            event: "Berlin, Germany",
+            images: [
+                "https://images.unsplash.com/photo-1560969184-10fe8719e047?auto=format&fit=crop&w=600&q=80"
+            ],
+            caption: "Berlin: Badminton, community meetups, and creative sparks.",
+            date: "2025-06-01"
+        }
+    ];
+    const events = [
+        { name: 'Seoul, South Korea', lat: 37.5665, lng: 126.9780, type: 'future', date: 'September 2025', attendees: 'TBA' },
+        { name: 'Buenos Aires, Argentina', lat: -34.6037, lng: -58.3816, type: 'future', date: 'TBA', attendees: 'TBA' },
+        { name: 'Denver, USA', lat: 39.7392, lng: -104.9903, type: 'past', date: 'February 2025', attendees: '150+' },
+        { name: 'San Francisco, USA', lat: 37.7749, lng: -122.4194, type: 'past', date: 'Oct 2024 - Mar 2025', attendees: '180+' },
+        { name: 'Cannes, France', lat: 43.5528, lng: 7.0174, type: 'past', date: 'July 2025', attendees: '120+' },
+        { name: 'Bangkok, Thailand', lat: 13.7563, lng: 100.5018, type: 'past', date: 'November 2024', attendees: '200+' },
+        { name: 'Brussels, Belgium', lat: 50.8503, lng: 4.3517, type: 'past', date: 'July 2024', attendees: '160+' },
+        { name: 'Berlin, Germany', lat: 52.5200, lng: 13.4050, type: 'past', date: 'June 2025', attendees: '80+' }
+    ];
+    // --- Future Events Feature Rendering ---
+    function renderFutureEventsBox() {
+        const container = document.getElementById('futureEventsBox');
+        container.innerHTML = '';
+        const upcoming = events.filter(ev => ev.type === 'future');
+        for (const ev of upcoming) {
+            container.innerHTML += `
+                <div class="future-event-card">
+                    <div class="future-event-details">
+                        <div class="future-event-title"><i class="fa-solid fa-location-dot" style="color:var(--accent);margin-right:5px"></i> ${ev.name}</div>
+                        <div class="future-event-meta">
+                            <i class="fa-regular fa-calendar"></i> ${ev.date}
+                        </div>
+                        <div class="future-event-meta">
+                            <i class="fa-solid fa-users"></i> Attendees: ${ev.attendees}
+                        </div>
+                        <div class="future-event-caption">
+                            Join us for the next cup of espresso in ${ev.name.split(',')[0]}!
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    renderFutureEventsBox();
+
+    // --- Past Events Box Rendering ---
+    function renderPastEventsBox() {
+        const container = document.getElementById('pastEventsBox');
+        container.innerHTML = '';
+        const ordered = pastMemories
+            .map(mem => {
+                const ev = events.find(e => e.name === mem.event);
+                return ev ? {...mem, attendees: ev.attendees, dateDisplay: ev.date || ''} : null;
+            }).filter(Boolean)
+            .sort((a,b) => new Date(a.date) - new Date(b.date));
+        for (const mem of ordered) {
+            const idx = pastMemories.findIndex(m => m.event === mem.event);
+            container.innerHTML += `
+                <div class="past-event-card" data-idx="${idx}">
+                    <img class="past-event-img" src="${mem.images[0]}" alt="${mem.event}">
+                    <div class="past-event-details">
+                        <div class="past-event-title">${mem.event}</div>
+                        <div class="past-event-meta">
+                            <i class="fa-regular fa-calendar"></i> ${mem.dateDisplay}
+                            <span style="margin-left:13px"><i class="fa-solid fa-users"></i> ${mem.attendees}</span>
+                        </div>
+                        <div class="past-event-caption">${mem.caption}</div>
+                    </div>
+                </div>
+            `;
+        }
+        // Add click event to cards to show modal
+        container.querySelectorAll('.past-event-card').forEach(card => {
+            card.onclick = function() {
+                const idx = +this.getAttribute('data-idx');
+                showMemoryModal(pastMemories[idx].event, 0);
+            }
+        });
+    }
+    renderPastEventsBox();
+
+    // Modal logic for event memories/details
+    // Remove "memories" button and show detailed event info/photos
+    // Show modal with event details and all photos for that event when a past-event-card is clicked
+    function showMemoryModal(eventName, imgIdx = 0) {
+        const memory = pastMemories.find(mem => mem.event === eventName);
+        if (!memory) return;
+        const modal = document.getElementById('memoryModal');
+        const modalDetails = document.getElementById('memoryModalDetails');
+        const modalImg = document.getElementById('modalMemImg');
+        const modalCaption = document.getElementById('memoryModalCaption');
+        const modalSlider = document.getElementById('modalSlider');
+        const memDots = document.getElementById('modalMemDots');
+
+        let imageIndex = imgIdx;
+        function updateModalImg() {
+            modalImg.src = memory.images[imageIndex];
+            modalCaption.textContent = memory.caption;
+            // Show dots if more than one image
+            memDots.innerHTML = '';
+            if (memory.images.length > 1) {
+                for (let i = 0; i < memory.images.length; i++) {
+                    const dot = document.createElement('span');
+                    dot.className = 'dot' + (i === imageIndex ? ' active' : '');
+                    dot.onclick = () => { imageIndex = i; updateModalImg(); }
+                    memDots.appendChild(dot);
+                }
+            }
+        }
+        document.getElementById('modalMemPrev').onclick = function() {
+            imageIndex = (imageIndex - 1 + memory.images.length) % memory.images.length;
+            updateModalImg();
+        };
+        document.getElementById('modalMemNext').onclick = function() {
+            imageIndex = (imageIndex + 1) % memory.images.length;
+            updateModalImg();
+        };
+
+        // Details: Event name, date, attendees, caption
+        const ev = events.find(e => e.name === memory.event);
+        let detailsHTML = `<div><b>${memory.event}</b></div>`;
+        if (ev) {
+            detailsHTML += `<div style="font-size:0.92em;color:var(--gray);margin-top:2px;"><i class="fa-regular fa-calendar"></i> ${ev.date}`;
+            if (ev.attendees) detailsHTML += ` &nbsp; <i class="fa-solid fa-users"></i> ${ev.attendees}`;
+            detailsHTML += `</div>`;
+        }
+        detailsHTML += `<div style="font-size:1em;color:var(--primary);margin-top:9px;margin-bottom:7px;">${memory.caption}</div>`;
+        modalDetails.innerHTML = detailsHTML;
+
+        updateModalImg();
+        modal.classList.add('active');
+    }
+
+    document.getElementById('memoryModalClose').onclick = function() {
+        document.getElementById('memoryModal').classList.remove('active');
+    };
+
+    // --- The rest of your JS remains unchanged (expand/collapse, map, modal, etc) ---
+    // --- Hide header when expanded ---
+    const espressoFrame = document.getElementById('espressoFrame');
+    const expandBtn = document.getElementById('expandBtn');
+    const mapExpandOverlay = document.getElementById('mapExpandOverlay');
+    const mainHeader = document.getElementById('mainHeader');
+
+    expandBtn.onclick = function() {
+        mapExpandOverlay.classList.add('active');
+        mainHeader.classList.add('hidden');
+        setTimeout(function() {
+            if (!expandedIsMapLoaded) {
+                expandedIsMapLoaded = true;
+                expandedMap = L.map('expandedEventMap', {
+                    zoomControl: false,
+                    scrollWheelZoom: true,
+                    attributionControl: false,
+                }).setView([20, 0], 2.2);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '',
+                    minZoom: 2, maxZoom: 17,
+                }).addTo(expandedMap);
+                // markers
+                expandedMapMarkers = [];
+                events.forEach((ev, idx) => {
+                    const memories = pastMemories.find(mem => mem.event === ev.name);
+                    let popupHTML = `<div style="font-family:Inter,sans-serif;max-width:270px;">`;
+                    popupHTML += `<b style="color:var(--secondary);font-size:16px;">${ev.name}</b><br>`;
+                    popupHTML += `<span style="font-size:13px;color:var(--light);">${ev.date}</span><br>`;
+                    popupHTML += `<span style="font-size:13px;color:var(--gray);">${ev.attendees} Attendees</span><br>`;
+                    if (memories && memories.images && memories.images.length) {
+                        popupHTML += `<div style="margin:10px 0 0 0;"><img src="${memories.images[0]}" style="width:100%;max-width:220px;height:95px;object-fit:cover;border-radius:8px;box-shadow:0 1px 7px #422f1730;"></div>`;
+                        popupHTML += `<div style="margin-top:7px;"><button onclick="window.showMemoryModal && window.showMemoryModal('${ev.name}',0)" style='background:var(--brown-btn);color:var(--secondary);border:none;border-radius:8px;padding:6px 14px;font-size:14px;font-weight:600;cursor:pointer;'>See details & photos</button></div>`;
+                    }
+                    popupHTML += `</div>`;
+                    const marker = L.marker([ev.lat, ev.lng], {title: ev.name, icon: brownIcon}).addTo(expandedMap);
+                    marker.bindPopup(popupHTML, {autoPan: true});
+                    expandedMapMarkers.push(marker);
+                });
+                // Path line
+                const ordered = pastMemories
+                    .map(mem => {
+                        const ev = events.find(e => e.name === mem.event);
+                        return ev ? [ev.lat, ev.lng] : null;
+                    }).filter(Boolean);
+                expandedPathLine = L.polyline(ordered, {
+                    color: 'var(--accent)',
+                    opacity: 0.85,
+                    weight: 6,
+                    className: 'espresso-path-line'
+                }).addTo(expandedMap);
+                // Chrono nav for expanded map
+                function focusChronoLocationExpanded(i) {
+                    const state = focusChronoLocationOnMap(i, expandedMap, expandedMapMarkers);
+                    document.getElementById('expandedPrevLocationBtn').disabled = state.index === 0;
+                    document.getElementById('expandedNextLocationBtn').disabled = state.index === state.length - 1;
+                }
+                document.getElementById('expandedPrevLocationBtn').onclick = function() {
+                    expandedChronoIndex--; focusChronoLocationExpanded(expandedChronoIndex);
+                };
+                document.getElementById('expandedNextLocationBtn').onclick = function() {
+                    expandedChronoIndex++; focusChronoLocationExpanded(expandedChronoIndex);
+                };
+                // Zoom buttons for expanded map
+                document.getElementById('expandedZoomInBtn').onclick = function() {
+                    expandedMap.zoomIn();
+                };
+                document.getElementById('expandedZoomOutBtn').onclick = function() {
+                    expandedMap.zoomOut();
+                };
+                // Search bar for expanded map
+                const expandedSearchInput = document.getElementById('expandedEventSearchInput');
+                const expandedSuggestionsBox = document.getElementById('expandedSearchSuggestions');
+                let expandedSearchSuggestions = [];
+                let expandedSelectedSuggestionIdx = -1;
+                function expandedNormalize(str) {
+                    return str.toLowerCase().replace(/[\s\-,.]+/g, '');
+                }
+                function expandedGetSuggestions(txt) {
+                    if (!txt.trim()) return events;
+                    const nTxt = expandedNormalize(txt);
+                    return events.filter(ev => expandedNormalize(ev.name).startsWith(nTxt) ||
+                        expandedNormalize(ev.name).includes(nTxt) ||
+                        ev.name.toLowerCase().includes(txt.toLowerCase())
+                    );
+                }
+                function expandedRenderSuggestions() {
+                    const val = expandedSearchInput.value;
+                    expandedSearchSuggestions = expandedGetSuggestions(val);
+                    if (expandedSearchSuggestions.length === 0) {
+                        expandedSuggestionsBox.style.display = "none";
+                        expandedSuggestionsBox.innerHTML = "";
+                        return;
+                    }
+                    expandedSuggestionsBox.innerHTML = expandedSearchSuggestions.map((ev, idx) => `
+                        <div class="search-suggestion${idx === expandedSelectedSuggestionIdx ? " active" : ""}" data-idx="${idx}">
+                            <i class="fa-solid ${ev.type==='past'?'fa-clock':'fa-location-dot'}"></i>
+                            <span>${ev.name}</span>
+                            <span style="margin-left:auto;font-size:12px;color:var(--gray);">${ev.date}</span>
+                        </div>
+                    `).join('');
+                    expandedSuggestionsBox.style.display = "block";
+                }
+                expandedSearchInput.addEventListener('input', function() {
+                    expandedSelectedSuggestionIdx = -1;
+                    expandedRenderSuggestions();
+                });
+                expandedSearchInput.addEventListener('focus', function() {
+                    expandedRenderSuggestions();
+                });
+                expandedSearchInput.addEventListener('keydown', function(e) {
+                    if (expandedSuggestionsBox.style.display !== "block") return;
+                    if (e.key === "ArrowDown") {
+                        if (expandedSelectedSuggestionIdx < expandedSearchSuggestions.length - 1) expandedSelectedSuggestionIdx++;
+                        else expandedSelectedSuggestionIdx = 0;
+                        expandedRenderSuggestions();
+                        e.preventDefault();
+                    } else if (e.key === "ArrowUp") {
+                        if (expandedSelectedSuggestionIdx > 0) expandedSelectedSuggestionIdx--;
+                        else expandedSelectedSuggestionIdx = expandedSearchSuggestions.length - 1;
+                        expandedRenderSuggestions();
+                        e.preventDefault();
+                    } else if (e.key === "Enter") {
+                        if (expandedSelectedSuggestionIdx >= 0) {
+                            expandedChooseSuggestion(expandedSelectedSuggestionIdx);
+                            e.preventDefault();
+                        } else if (expandedSearchSuggestions.length === 1) {
+                            expandedChooseSuggestion(0);
+                            e.preventDefault();
+                        }
+                    } else if (e.key === "Escape") {
+                        expandedSuggestionsBox.style.display = "none";
+                    }
+                });
+                expandedSuggestionsBox.addEventListener('mousedown', function(e) {
+                    const item = e.target.closest('.search-suggestion');
+                    if (!item) return;
+                    const idx = +item.dataset.idx;
+                    expandedChooseSuggestion(idx);
+                });
+                function expandedChooseSuggestion(idx) {
+                    const ev = expandedSearchSuggestions[idx];
+                    expandedSearchInput.value = ev.name;
+                    expandedSuggestionsBox.style.display = "none";
+                    const evIdx = events.findIndex(e => e.name === ev.name);
+                    if (evIdx !== -1) {
+                        expandedMap.flyTo([ev.lat, ev.lng], 7, {duration: 1.1});
+                        expandedMapMarkers[evIdx].openPopup();
+                    }
+                }
+                document.addEventListener('click', function(e) {
+                    if (!expandedSearchInput.contains(e.target) && !expandedSuggestionsBox.contains(e.target)) {
+                        expandedSuggestionsBox.style.display = "none";
+                    }
+                });
+                // Chrono nav init for expanded map
+                expandedChronoIndex = 0;
+                focusChronoLocationOnMap(0, expandedMap, expandedMapMarkers);
+            } else {
+                setTimeout(function() {
+                    expandedMap.invalidateSize();
+                }, 300);
+            }
+        }, 100);
+    };
+
+    document.getElementById('collapseBtn').onclick = function() {
+        mapExpandOverlay.classList.remove('active');
+        setTimeout(function() {
+            if (typeof map !== "undefined" && map) map.invalidateSize();
+            mainHeader.classList.remove('hidden');
+        }, 400);
+    };
+
+    // --- Map logic & Chrono navigation ---
+    let map, mapMarkers = [], isMapLoaded = false, pathLine = null;
+    let chronoIndex = 0;
+    let expandedMap, expandedMapMarkers = [], expandedPathLine = null, expandedIsMapLoaded = false;
+    let expandedChronoIndex = 0;
+
+    function getChronoOrderedEvents() {
+        const past = pastMemories
+            .map(mem => {
+                const ev = events.find(e => e.name === mem.event);
+                return ev ? {...ev, dateObj: new Date(mem.date), featuredImage: mem.images[0]} : null;
+            }).filter(Boolean)
+            .sort((a,b) => a.dateObj - b.dateObj);
+        const future = events
+            .filter(ev => ev.type === 'future')
+            .map(ev => ({...ev, dateObj: new Date(ev.date && !ev.date.includes('TBA') ? ev.date : 3000), featuredImage: ""}))
+            .sort((a,b) => a.dateObj - b.dateObj);
+        return [...past, ...future];
+    }
+    function focusChronoLocationOnMap(i, mapObj, markerArr) {
+        const list = getChronoOrderedEvents();
+        chronoIndex = i;
+        if (chronoIndex < 0) chronoIndex = 0;
+        if (chronoIndex > list.length-1) chronoIndex = list.length-1;
+        let ev = list[chronoIndex];
+        if (!ev) return;
+        mapObj.flyTo([ev.lat, ev.lng], 7.8, {duration: 1.1});
+        const mapIdx = events.findIndex(e => e.name === ev.name);
+        let popupHTML = `<div style="font-family:Inter,sans-serif;max-width:270px;">`;
+        popupHTML += `<b style="color:var(--secondary);font-size:16px;">${ev.name}</b><br>`;
+        popupHTML += `<span style="font-size:13px;color:var(--light);">${ev.date}</span><br>`;
+        popupHTML += `<span style="font-size:13px;color:var(--gray);">${ev.attendees} Attendees</span><br>`;
+        if (ev.featuredImage) {
+            popupHTML += `<div style="margin:10px 0 0 0;"><img src="${ev.featuredImage}" style="width:100%;max-width:220px;height:95px;object-fit:cover;border-radius:8px;box-shadow:0 1px 7px #422f1730;"></div>`;
+            popupHTML += `<div style="margin-top:7px;"><button onclick="window.showMemoryModal && window.showMemoryModal('${ev.name}',0)" style='background:var(--brown-btn);color:var(--secondary);border:none;border-radius:8px;padding:6px 14px;font-size:14px;font-weight:600;cursor:pointer;'>See details & photos</button></div>`;
+        }
+        popupHTML += `</div>`;
+        if (markerArr[mapIdx]) {
+            markerArr[mapIdx].bindPopup(popupHTML, {autoPan: true});
+            markerArr[mapIdx].openPopup();
+        }
+        // Enable/disable buttons
+        return {index: chronoIndex, length: list.length};
+    }
+    // For main (framed) map
+    function focusChronoLocation(i) {
+        const state = focusChronoLocationOnMap(i, map, mapMarkers);
+        document.getElementById('prevLocationBtn').disabled = state.index === 0;
+        document.getElementById('nextLocationBtn').disabled = state.index === state.length - 1;
+    }
+    document.getElementById('prevLocationBtn').onclick = function() { focusChronoLocation(chronoIndex-1); };
+    document.getElementById('nextLocationBtn').onclick = function() { focusChronoLocation(chronoIndex+1); };
+
+    const brownIcon = L.icon({
+        iconUrl:
+          'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="38" height="55"><path d="M19 1C8.5 1 0 9.9 0 20.5c0 12.6 17.3 32.2 18 33.1.6.7 1.5.7 2.1 0 .7-.9 18-20.5 18-33.1C38 9.9 29.5 1 19 1z" fill="%23422F17" stroke="white" stroke-width="2"/><circle cx="19" cy="20" r="7" fill="%23FFB85B" stroke="white" stroke-width="1.5"/></svg>',
+        iconSize: [38, 55],
+        iconAnchor: [19, 54],
+        popupAnchor: [1, -45]
+    });
+
+    function initMap() {
+        if (isMapLoaded) return;
+        isMapLoaded = true;
+        map = L.map('eventMap', {
+            zoomControl: false,
+            scrollWheelZoom: true,
+            attributionControl: false,
+        }).setView([20, 0], 2.2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '',
+            minZoom: 2, maxZoom: 17,
+        }).addTo(map);
+        mapMarkers = [];
+        drawPastPathLine();
+        events.forEach((ev, idx) => {
+            const memories = pastMemories.find(mem => mem.event === ev.name);
+            let popupHTML = `<div style="font-family:Inter,sans-serif;max-width:270px;">`;
+            popupHTML += `<b style="color:var(--secondary);font-size:16px;">${ev.name}</b><br>`;
+            popupHTML += `<span style="font-size:13px;color:var(--light);">${ev.date}</span><br>`;
+            popupHTML += `<span style="font-size:13px;color:var(--gray);">${ev.attendees} Attendees</span><br>`;
+            if (memories && memories.images && memories.images.length) {
+                popupHTML += `<div style="margin:10px 0 0 0;"><img src="${memories.images[0]}" style="width:100%;max-width:220px;height:95px;object-fit:cover;border-radius:8px;box-shadow:0 1px 7px #422f1730;"></div>`;
+                popupHTML += `<div style="margin-top:7px;"><button onclick="window.showMemoryModal && window.showMemoryModal('${ev.name}',0)" style='background:var(--brown-btn);color:var(--secondary);border:none;border-radius:8px;padding:6px 14px;font-size:14px;font-weight:600;cursor:pointer;'>See details & photos</button></div>`;
+            }
+            popupHTML += `</div>`;
+            const marker = L.marker([ev.lat, ev.lng], {title: ev.name, icon: brownIcon}).addTo(map);
+            marker.bindPopup(popupHTML, {autoPan: true});
+            mapMarkers.push(marker);
+        });
+        map.on('popupopen', function(e) {
+            // Button handled inline in popup HTML
+        });
+        focusChronoLocation(0);
+    }
+    function drawPastPathLine() {
+        if (pathLine) { map.removeLayer(pathLine); }
+        const ordered = pastMemories
+            .map(mem => {
+                const ev = events.find(e => e.name === mem.event);
+                return ev ? [ev.lat, ev.lng] : null;
+            }).filter(Boolean);
+        pathLine = L.polyline(ordered, {
+            color: 'var(--accent)',
+            opacity: 0.85,
+            weight: 6,
+            className: 'espresso-path-line'
+        }).addTo(map);
+    }
+
+    document.getElementById('zoomInBtn').onclick = function() {
+        if (map) map.zoomIn();
+    };
+    document.getElementById('zoomOutBtn').onclick = function() {
+        if (map) map.zoomOut();
+    };
+
+    // Make showMemoryModal available globally for marker popup buttons
+    window.showMemoryModal = showMemoryModal;
+
+    // Search Bar Logic unchanged...
+
+    window.onload = function() {
+        initMap();
+    }
+    </script>
+</body>
+</html>
